@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Table(name = "users")
-@Entity(name = "users")
+@Entity
 @EqualsAndHashCode(of = "id")
 public class User implements UserDetails {
 
@@ -31,10 +31,10 @@ public class User implements UserDetails {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
-
     private List<Role> roles;
 
-    public User() {}
+    public User() {
+    }
 
     public User(String login, String password, String cpf, String address, String phone, String stripeCustomerId) {
         this.login = login;
@@ -139,5 +139,9 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    public String getName() {
+        return login;
     }
 }

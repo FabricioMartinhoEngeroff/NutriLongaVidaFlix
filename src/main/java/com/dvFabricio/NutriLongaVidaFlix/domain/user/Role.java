@@ -6,7 +6,7 @@ import lombok.EqualsAndHashCode;
 import java.util.List;
 
 @Table(name = "roles")
-@Entity(name = "roles")
+@Entity
 @EqualsAndHashCode(of = "id")
 public class Role {
     @Id

@@ -1,28 +1,37 @@
-package com.dvFabricio.NutriLongaVidaFlix.domain.video;
+package com.dvFabricio.NutriLongaVidaFlix.domain.comment;
 
 import com.dvFabricio.NutriLongaVidaFlix.domain.user.User;
+import com.dvFabricio.NutriLongaVidaFlix.domain.video.Video;
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;
 
-@Table(name = "ratings")
-@Entity(name = "ratings")
+import java.util.Date;
+
+@Table(name = "comments")
+@Entity
 @EqualsAndHashCode(of = "id")
-public class Rating {
+public class Comment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    private String text;
+
+    private Date date;
+
     @ManyToOne
     private User user;
-    private int score; // Score from 1 to 5
+
     @ManyToOne
     private Video video;
 
-    public Rating() {}
+    public Comment() {}
 
-    public Rating(User user, int score, Video video) {
+    public Comment(User user, String text, Date date, Video video) {
         this.user = user;
-        this.score = score;
+        this.text = text;
+        this.date = date;
         this.video = video;
     }
 
@@ -42,12 +51,20 @@ public class Rating {
         this.user = user;
     }
 
-    public int getScore() {
-        return score;
+    public String getText() {
+        return text;
     }
 
-    public void setScore(int score) {
-        this.score = score;
+    public void setText(String text) {
+        this.text = text;
+    }
+
+    public Date getDate() {
+        return date;
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
     }
 
     public Video getVideo() {
@@ -57,4 +74,5 @@ public class Rating {
     public void setVideo(Video video) {
         this.video = video;
     }
+
 }

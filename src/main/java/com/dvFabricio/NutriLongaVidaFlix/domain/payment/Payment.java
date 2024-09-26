@@ -7,7 +7,7 @@ import lombok.EqualsAndHashCode;
 import java.util.Date;
 
 @Table(name = "payments")
-@Entity(name = "payments")
+@Entity
 @EqualsAndHashCode(of = "id")
 public class Payment {
 
