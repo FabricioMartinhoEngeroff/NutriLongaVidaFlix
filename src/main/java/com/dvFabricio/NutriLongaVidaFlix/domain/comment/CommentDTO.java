@@ -8,8 +8,8 @@ public record CommentDTO(UUID id, String text, String userName, Date date, Long 
     public CommentDTO(Comment comment) {
         this(comment.getId(),
                 comment.getText(),
-                comment.getUser().getName(),
+                comment.getUserName(), // Usando o método da classe Comment
                 comment.getDate(),
-                comment.getVideo().getId()); // Adicionando o ID do vídeo
+                comment.getVideoId()); // Usando o método da classe Comment
     }
 }

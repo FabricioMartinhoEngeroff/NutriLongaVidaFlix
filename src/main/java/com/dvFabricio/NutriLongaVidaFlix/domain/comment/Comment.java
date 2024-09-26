@@ -8,6 +8,7 @@ import lombok.*;
 import java.util.Date;
 import java.util.UUID;
 
+
 @Table(name = "comments")
 @Entity
 @Setter
@@ -22,7 +23,7 @@ public class Comment {
 
     private String text;
 
-    private Date date; // Alterado para LocalDateTime
+    private Date date;
 
     @ManyToOne
     private User user;
@@ -30,4 +31,13 @@ public class Comment {
     @ManyToOne
     private Video video;
 
+
+    public String getUserName() {
+        return user != null ? user.getName() : "Usuário não disponível";
+    }
+
+
+    public UUID getVideoId() {
+        return video != null ? video.getId() : null;
+    }
 }

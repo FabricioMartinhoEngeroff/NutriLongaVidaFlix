@@ -29,13 +29,13 @@ public class Video {
     private String description;
     private String url;
 
-    @ManyToOne
+    @ManyToOne(optional = true)
     private Category category;
 
-    @OneToMany(mappedBy = "video")
+    @OneToMany(mappedBy = "video", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Comment> comments;
 
-    @OneToMany(mappedBy = "video")
+    @OneToMany(mappedBy = "video", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Rating> ratings;
 
     public String getCategoryName() {
