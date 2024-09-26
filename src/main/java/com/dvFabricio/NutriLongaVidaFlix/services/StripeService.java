@@ -1,4 +1,4 @@
-package com.dvFabricio.NutriLongaVidaFlix.service;
+package com.dvFabricio.NutriLongaVidaFlix.services;
 
 import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;

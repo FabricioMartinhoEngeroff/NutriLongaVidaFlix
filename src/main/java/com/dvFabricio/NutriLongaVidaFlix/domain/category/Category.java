@@ -1,22 +1,31 @@
-package com.dvFabricio.NutriLongaVidaFlix.domain.video;
+package com.dvFabricio.NutriLongaVidaFlix.domain.category;
 
+import com.dvFabricio.NutriLongaVidaFlix.domain.video.Video;
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;
 
 import java.util.List;
 
 @Table(name = "categories")
-@Entity(name = "categories")
+@Entity
 @EqualsAndHashCode(of = "id")
 public class Category {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String name;
+
     @OneToMany(mappedBy = "category")
     private List<Video> videos;
 
     public Category() {}
+
+    public Category(List<Video> videos, String name, Long id) {
+        this.videos = videos;
+        this.name = name;
+        this.id = id;
+    }
 
     public Category(String name) {
         this.name = name;
