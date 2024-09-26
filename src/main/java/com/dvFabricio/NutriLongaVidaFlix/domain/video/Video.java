@@ -2,24 +2,31 @@ package com.dvFabricio.NutriLongaVidaFlix.domain.video;
 
 import com.dvFabricio.NutriLongaVidaFlix.domain.category.Category;
 import com.dvFabricio.NutriLongaVidaFlix.domain.comment.Comment;
+import com.dvFabricio.NutriLongaVidaFlix.domain.comment.CommentDTO;
 import com.dvFabricio.NutriLongaVidaFlix.domain.rating.Rating;
+import com.dvFabricio.NutriLongaVidaFlix.domain.rating.RatingDTO;
 import jakarta.persistence.*;
-import lombok.EqualsAndHashCode;
+import lombok.*;
 
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Table(name = "videos")
 @Entity
+@Getter
+@Setter
 @EqualsAndHashCode(of = "id")
+@NoArgsConstructor
+@AllArgsConstructor
 public class Video {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue
+    private UUID id;
 
     private String title;
-
     private String description;
-
     private String url;
 
     @ManyToOne
@@ -31,68 +38,15 @@ public class Video {
     @OneToMany(mappedBy = "video")
     private List<Rating> ratings;
 
-    public Video() {
+    public String getCategoryName() {
+        return category != null ? category.getName() : "Categoria não disponível";
     }
 
-    public Video(String title, String description, Category category) {
-        this.title = title;
-        this.description = description;
-        this.category = category;
+    public List<CommentDTO> getCommentDTOs() {
+        return comments.stream().map(CommentDTO::new).collect(Collectors.toList());
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public Category getCategory() {
-        return category;
-    }
-
-    public void setCategory(Category category) {
-        this.category = category;
-    }
-
-    public List<Comment> getComments() {
-        return comments;
-    }
-
-    public void setComments(List<Comment> comments) {
-        this.comments = comments;
-    }
-
-    public List<Rating> getRatings() {
-        return ratings;
-    }
-
-    public void setRatings(List<Rating> ratings) {
-        this.ratings = ratings;
+    public List<RatingDTO> getRatingDTOs() {
+        return ratings.stream().map(RatingDTO::new).collect(Collectors.toList());
     }
 }

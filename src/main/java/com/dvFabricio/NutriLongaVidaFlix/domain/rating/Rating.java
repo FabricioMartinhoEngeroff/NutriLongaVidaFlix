@@ -4,15 +4,23 @@ import com.dvFabricio.NutriLongaVidaFlix.domain.user.User;
 import com.dvFabricio.NutriLongaVidaFlix.domain.video.Video;
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Table(name = "ratings")
+import java.util.UUID;
+
 @Entity
+@Table(name = "ratings")
 @EqualsAndHashCode(of = "id")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Rating {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue
+    private UUID id;
 
     private int rating;
 
@@ -22,31 +30,9 @@ public class Rating {
     @ManyToOne
     private Video video;
 
-    public Rating() {}
-
     public Rating(User user, int rating, Video video) {
         this.user = user;
         this.rating = rating;
         this.video = video;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public int getRating() {
-        return rating;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public Video getVideo() {
-        return video;
-    }
-
-    public int getScore() {
-        return rating;
     }
 }
