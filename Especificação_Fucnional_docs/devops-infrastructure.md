@@ -22,6 +22,26 @@ Este documento registra os conceitos de DevOps, infraestrutura e segurança apli
 
 A aplicação roda em container Docker dentro da EC2, definido pelo `Dockerrun.aws.json`.
 
+> **Observação (2026-07-04):**
+> Adicionadas flags de memória JVM ao `Dockerfile` para garantir estabilidade no t3.micro (1GB RAM).
+> Sem flags explícitas, a JVM opera sem teto de heap e pode consumir 700-800MB, causando OOM Kill.
+>
+> ```
+> ENV JAVA_OPTS="-Xms64m -Xmx320m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -Djava.security.egd=file:/dev/./urandom"
+> ```
+>
+> | Flag | Valor | Motivo |
+> |---|---|---|
+> | `-Xms` | 64m | heap inicial pequeno — JVM não pré-aloca RAM no boot |
+> | `-Xmx` | 320m | teto do heap — objetos Java não ultrapassam isso |
+> | `-XX:MaxMetaspaceSize` | 128m | teto para classes/métodos carregados pelo Spring |
+> | `-XX:+UseSerialGC` | — | GC single-thread, menor overhead para baixo tráfego |
+> | `-Djava.security.egd` | urandom | evita travamento no startup esperando entropia |
+>
+> Budget resultante: heap 320m + metaspace 128m + stacks/native ~80m = ~528m JVM + ~200m OS = ~728m total (cabe em 1GB com ~296m de folga).
+>
+> **Para reverter:** basta trocar a linha por `ENV JAVA_OPTS=""` no Dockerfile.
+
 ---
 
 ### Banco de Dados — RDS PostgreSQL
@@ -35,6 +55,19 @@ A aplicação roda em container Docker dentro da EC2, definido pelo `Dockerrun.a
 - Backup automático gerenciado pela AWS
 - Conexão interna à VPC via JDBC — nunca exposta publicamente
 - Em desenvolvimento: H2 em memória (sem custo, sem configuração)
+
+> **Observação (2026-07-04):**
+> O RDS PostgreSQL foi **deletado** em produção para reduzir custos (~$1.00/mês economizado).
+> A instância de produção passou a usar o perfil `prod-h2` com banco H2 em arquivo:
+> `jdbc:h2:file:/tmp/vidalongaflix-media/h2-data/proddb`
+>
+> **Motivo:** projeto é uma cobaia de aprendizado — não há requisito de persistência garantida
+> entre deploys. H2 sobrevive a restarts do container mas perde dados em novo deploy (novo
+> container = novo filesystem `/tmp`). Para este contexto isso é aceitável.
+>
+> **Para reverter:** recriar instância RDS db.t3.micro na AWS, configurar as variáveis
+> `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` no Beanstalk e trocar
+> `SPRING_PROFILES_ACTIVE` de `prod-h2` para `prod`.
 
 ---
 
@@ -354,3 +387,23 @@ curl -s http://localhost:8090/api/actuator/health | jq
 ---
 
 *Documento criado em: março de 2026*
+
+---
+
+## Histórico de Alterações
+
+### 2026-07-04 — Otimização de custos e estabilidade JVM
+
+**Contexto:** análise dos logs do EB e do painel de billing identificou dois problemas: JVM sem limites de memória numa instância de 1GB, e recursos AWS pagos sem uso.
+
+**Alterações realizadas:**
+
+| O que | Onde | Motivo |
+|---|---|---|
+| Adicionadas flags JVM (`-Xmx320m` etc.) | `Dockerfile` — linha `ENV JAVA_OPTS` | JVM sem teto de heap em t3.micro (1GB) é risco de OOM Kill |
+| RDS `vidalongaflix-prod` deletado | Console AWS → RDS | App já usa H2; RDS custava ~$1.00/mês sem ser usado |
+| 4 snapshots RDS deletados | Console AWS → RDS → Snapshots | Snapshots órfãos após exclusão da instância; cobravam storage |
+
+**Economia mensal resultante:** ~$1.40/mês (~R$8/mês)
+
+**O que NÃO foi alterado:** Elastic IP `18.119.228.65` está associado ao EB e não pode ser liberado — cobrança de $3.65/mês é estrutural desde a mudança de pricing da AWS em fevereiro de 2024 (IPv4 público passou a ser cobrado mesmo quando em uso).

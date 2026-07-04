@@ -25,6 +25,6 @@ EXPOSE 8090
 COPY --from=build /workspace/app.jar ./app.jar
 
 # exec replaces the shell with java as PID 1, so SIGTERM reaches the JVM for graceful shutdown
-ENV JAVA_OPTS=""
+ENV JAVA_OPTS="-Xms64m -Xmx320m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -Djava.security.egd=file:/dev/./urandom"
 USER appuser
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
