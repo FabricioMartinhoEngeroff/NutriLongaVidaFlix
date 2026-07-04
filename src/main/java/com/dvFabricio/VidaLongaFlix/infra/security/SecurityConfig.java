@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                        .ignoringRequestMatchers("/auth/register", "/auth/login", "/auth/password-recovery", "/auth/reset-password")
                         .ignoringRequestMatchers(request -> {
                             String auth = request.getHeader("Authorization");
                             return auth != null && auth.startsWith("Bearer ");

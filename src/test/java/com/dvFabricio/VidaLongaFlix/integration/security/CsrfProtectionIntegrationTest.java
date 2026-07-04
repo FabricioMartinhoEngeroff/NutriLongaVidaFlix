@@ -51,21 +51,21 @@ class CsrfProtectionIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isOk());
     }
 
-    // POST sem nenhum token CSRF deve ser bloqueado
+    // POST sem nenhum token CSRF deve ser bloqueado.
+    // Usa /auth/logout porque register/login são intencionalmente isentos de CSRF.
+    // Logout é protegido para evitar que um atacante force o usuário a sair sem querer.
     @Test
     void shouldRejectPostWithoutCsrfToken() throws Exception {
-        mockMvc.perform(post("/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(LOGIN_BODY))
+        mockMvc.perform(post("/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
     }
 
-    // POST com cookie e header com valores diferentes deve ser bloqueado
+    // POST com cookie e header com valores diferentes deve ser bloqueado.
     @Test
     void shouldRejectPostWithMismatchedCsrfToken() throws Exception {
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/auth/logout")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(LOGIN_BODY)
                         .cookie(new Cookie("XSRF-TOKEN", "valor-real"))
                         .header("X-XSRF-TOKEN", "valor-errado"))
                 .andExpect(status().isForbidden());
