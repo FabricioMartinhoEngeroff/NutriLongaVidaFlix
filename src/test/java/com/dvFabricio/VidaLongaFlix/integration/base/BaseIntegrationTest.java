@@ -26,9 +26,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         webEnvironment = SpringBootTest.WebEnvironment.MOCK,
         properties = {
                 "whatsapp.enabled=false",
-                // Credenciais de admin usadas apenas nos testes de integração
                 "admin.email=admin@vidalongaflix.com",
-                "admin.password=AdminTest@123"
+                "admin.password=AdminTest@123",
+                "spring.cache.type=none"
         }
 )
 @AutoConfigureMockMvc

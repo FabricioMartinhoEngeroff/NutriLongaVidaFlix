@@ -127,6 +127,15 @@
             <artifactId>java-jwt</artifactId>
         </dependency>
 
+        <!-- Spring Cache — abstração de cache (implementação: simple/redis/caffeine)
+             Com spring.cache.type=simple usa ConcurrentHashMap na memória da JVM.
+             Para trocar para Redis em produção: spring.cache.type=redis + config de conexão.
+             Não exige mudança de código — só de properties. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+
         <!-- Bucket4j — rate limiting por IP (ACL da aplicação) -->
         <dependency>
             <groupId>com.bucket4j</groupId>

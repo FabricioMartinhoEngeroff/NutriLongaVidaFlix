@@ -3,12 +3,15 @@ package com.dvFabricio.VidaLongaFlix.services.content;
 import com.dvFabricio.VidaLongaFlix.domain.category.CategoryDTO;
 import com.dvFabricio.VidaLongaFlix.domain.category.Category;
 import com.dvFabricio.VidaLongaFlix.domain.category.CategoryType;
+import com.dvFabricio.VidaLongaFlix.infra.config.CacheConfig;
 import com.dvFabricio.VidaLongaFlix.infra.exception.database.DatabaseException;
 import com.dvFabricio.VidaLongaFlix.infra.exception.database.MissingRequiredFieldException;
 import com.dvFabricio.VidaLongaFlix.infra.exception.resource.DuplicateResourceException;
 import com.dvFabricio.VidaLongaFlix.infra.exception.resource.ResourceNotFoundExceptions;
 import com.dvFabricio.VidaLongaFlix.repositories.CategoryRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,13 +26,15 @@ public class CategoryService {
         this.categoryRepository = categoryRepository;
     }
 
+
+    @Cacheable(value = CacheConfig.CATEGORIES, key = "#type")
     public List<CategoryDTO> findAllSummary(CategoryType type) {
         return categoryRepository.findByType(type).stream()
                 .map(CategoryDTO::new)
                 .toList();
     }
 
-
+    @CacheEvict(value = CacheConfig.CATEGORIES, key = "#type")
     public CategoryDTO create(String name, CategoryType type) {
         validateCategoryName(name);
 
@@ -41,6 +46,8 @@ public class CategoryService {
         return new CategoryDTO(saved);
     }
 
+
+    @CacheEvict(value = CacheConfig.CATEGORIES, allEntries = true)
     public void update(UUID id, String name) {
         Category category = findCategoryById(id);
 
@@ -53,6 +60,7 @@ public class CategoryService {
         saveCategory(category);
     }
 
+    @CacheEvict(value = CacheConfig.CATEGORIES, allEntries = true)
     @Transactional
     public void delete(UUID id) {
         Category category = findCategoryById(id);

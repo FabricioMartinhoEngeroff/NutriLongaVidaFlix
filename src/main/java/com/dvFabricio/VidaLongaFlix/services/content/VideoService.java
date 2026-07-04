@@ -4,12 +4,16 @@ import com.dvFabricio.VidaLongaFlix.domain.video.VideoDTO;
 import com.dvFabricio.VidaLongaFlix.domain.video.VideoRequestDTO;
 import com.dvFabricio.VidaLongaFlix.domain.category.Category;
 import com.dvFabricio.VidaLongaFlix.domain.video.Video;
+import com.dvFabricio.VidaLongaFlix.infra.config.CacheConfig;
 import com.dvFabricio.VidaLongaFlix.infra.exception.database.DatabaseException;
 import com.dvFabricio.VidaLongaFlix.infra.exception.database.MissingRequiredFieldException;
 import com.dvFabricio.VidaLongaFlix.infra.exception.resource.ResourceNotFoundExceptions;
 import com.dvFabricio.VidaLongaFlix.repositories.CategoryRepository;
 import com.dvFabricio.VidaLongaFlix.repositories.VideoRepository;
 import com.dvFabricio.VidaLongaFlix.services.interaction.NotificationService;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,9 +37,14 @@ public class VideoService {
         this.notificationService = notificationService;
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = CacheConfig.VIDEOS,            allEntries = true),
+        @CacheEvict(value = CacheConfig.MOST_WATCHED,      allEntries = true),
+        @CacheEvict(value = CacheConfig.LEAST_WATCHED,     allEntries = true),
+        @CacheEvict(value = CacheConfig.VIEWS_BY_CATEGORY, allEntries = true)
+    })
     @Transactional
     public void create(VideoRequestDTO request) {
-        // Sem null checks manuais — @NotBlank no DTO + @Valid no controller já garantem
         Video video = Video.builder()
                 .title(request.title())
                 .description(request.description())
@@ -54,6 +63,12 @@ public class VideoService {
         notificationService.createForVideo(video);
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = CacheConfig.VIDEOS,            key = "#id"),
+        @CacheEvict(value = CacheConfig.MOST_WATCHED,      allEntries = true),
+        @CacheEvict(value = CacheConfig.LEAST_WATCHED,     allEntries = true),
+        @CacheEvict(value = CacheConfig.VIEWS_BY_CATEGORY, allEntries = true)
+    })
     @Transactional
     public void update(UUID id, VideoRequestDTO request) {
         Video video = findVideoById(id);
@@ -73,16 +88,25 @@ public class VideoService {
         saveVideo(video);
     }
 
+    @Cacheable(value = CacheConfig.VIDEOS, key = "#id")
     public VideoDTO findById(UUID id) {
         return new VideoDTO(findVideoById(id));
     }
 
+    @Cacheable(value = CacheConfig.VIDEOS)
     public List<VideoDTO> findAll() {
         return videoRepository.findAll().stream()
                 .map(VideoDTO::new)
                 .toList();
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = CacheConfig.VIDEOS,            key = "#id"),
+        @CacheEvict(value = CacheConfig.VIDEOS,            allEntries = true),
+        @CacheEvict(value = CacheConfig.MOST_WATCHED,      allEntries = true),
+        @CacheEvict(value = CacheConfig.LEAST_WATCHED,     allEntries = true),
+        @CacheEvict(value = CacheConfig.VIEWS_BY_CATEGORY, allEntries = true)
+    })
     @Transactional
     public void delete(UUID id) {
         Video video = findVideoById(id);
@@ -93,6 +117,11 @@ public class VideoService {
         }
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = CacheConfig.MOST_WATCHED,      allEntries = true),
+        @CacheEvict(value = CacheConfig.LEAST_WATCHED,     allEntries = true),
+        @CacheEvict(value = CacheConfig.VIEWS_BY_CATEGORY, allEntries = true)
+    })
     @Transactional
     public void registerView(UUID id) {
         Video video = findVideoById(id);
@@ -100,18 +129,21 @@ public class VideoService {
         saveVideo(video);
     }
 
+    @Cacheable(value = CacheConfig.MOST_WATCHED, key = "#limit")
     public List<VideoDTO> getMostWatchedVideos(int limit) {
         return videoRepository.findTopByOrderByViewsDesc(Pageable.ofSize(limit)).stream()
                 .map(VideoDTO::new)
                 .toList();
     }
 
+    @Cacheable(value = CacheConfig.LEAST_WATCHED, key = "#limit")
     public List<VideoDTO> getLeastWatchedVideos(int limit) {
         return videoRepository.findTopByOrderByViewsAsc(Pageable.ofSize(limit)).stream()
                 .map(VideoDTO::new)
                 .toList();
     }
 
+    @Cacheable(value = CacheConfig.VIEWS_BY_CATEGORY)
     public Map<String, Long> getTotalViewsByCategory() {
         return categoryRepository.findAll().stream()
                 .collect(Collectors.toMap(
