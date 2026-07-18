@@ -1,6 +1,6 @@
 # Materialized View & Fan-out — Cache Redis
 
----
+--- APLICADO JÁ OK
 
 ## Parte 1 — O Conceito do Livro
 

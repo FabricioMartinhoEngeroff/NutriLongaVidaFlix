@@ -6,14 +6,17 @@ import com.dvFabricio.VidaLongaFlix.domain.video.VideoRequestDTO;
 import com.dvFabricio.VidaLongaFlix.integration.base.BaseIntegrationTest;
 import com.dvFabricio.VidaLongaFlix.repositories.CategoryRepository;
 import com.dvFabricio.VidaLongaFlix.repositories.VideoRepository;
+import com.dvFabricio.VidaLongaFlix.repositories.VideoWatchEventRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -27,6 +30,7 @@ class VideoFlowIntegrationTest extends BaseIntegrationTest {
 
     @Autowired private CategoryRepository categoryRepository;
     @Autowired private VideoRepository videoRepository;
+    @Autowired private VideoWatchEventRepository watchEventRepository;
 
     private String adminToken;
     private UUID categoryId;
@@ -224,6 +228,39 @@ class VideoFlowIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidJson), adminToken))
                 .andExpect(status().isBadRequest());
+    }
+
+    // ─────────────────── EVENT SOURCING — WATCH EVENT ─────────────────────
+
+    @Test
+    void shouldPersistWatchEventWhenViewIsRegistered() throws Exception {
+        VideoRequestDTO request = buildVideoRequest(videoTitle, categoryId);
+        mockMvc.perform(bearer(post("/admin/videos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)), adminToken))
+                .andExpect(status().isCreated());
+
+        UUID videoId = videoRepository.findAll().stream()
+                .filter(v -> v.getTitle().equals(videoTitle))
+                .findFirst().orElseThrow().getId();
+
+        long before = watchEventRepository.count();
+
+        mockMvc.perform(patch("/videos/{id}/view", videoId).with(csrf()))
+                .andExpect(status().isOk());
+
+        long after = watchEventRepository.count();
+        assertEquals(before + 1, after);
+    }
+
+    // ──────────────────── FULL-TEXT SEARCH (PostgreSQL only) ──────────────
+
+    @Test
+    @Disabled("Requer tsvector/GIN do PostgreSQL — não compatível com H2")
+    void shouldReturnSearchResultsByText() throws Exception {
+        mockMvc.perform(get("/videos/search").param("q", "frango"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
     }
 
     // ─────────────────────────── HELPERS ──────────────────────────────────

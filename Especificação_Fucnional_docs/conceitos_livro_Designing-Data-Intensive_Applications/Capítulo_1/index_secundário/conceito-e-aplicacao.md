@@ -111,7 +111,7 @@ CREATE TRIGGER videos_search_update
   FOR EACH ROW EXECUTE FUNCTION update_video_search();
 ```
 
-Isso seria uma nova migration Flyway (`V21__add_fulltext_search.sql`).
+Isso seria uma nova migration Flyway (`V23__add_fulltext_search.sql`).
 
 ### No Spring Boot
 
@@ -133,4 +133,4 @@ Fase 2 (futuro):    Elasticsearch — quando precisar de fuzzy search, autocompl
 
 ### Nova migration necessária
 
-`V21__add_fulltext_search.sql` — adiciona coluna `search_vector`, cria o trigger e o índice GIN nas tabelas `videos` e `menus`.
+`V23__add_fulltext_search.sql` — adiciona coluna `search_vector`, cria o trigger e o índice GIN nas tabelas `videos` e `menus`.

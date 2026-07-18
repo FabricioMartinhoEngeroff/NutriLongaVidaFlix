@@ -1,15 +1,19 @@
 package com.dvFabricio.VidaLongaFlix.services.content;
 
+import com.dvFabricio.VidaLongaFlix.domain.user.User;
 import com.dvFabricio.VidaLongaFlix.domain.video.VideoDTO;
 import com.dvFabricio.VidaLongaFlix.domain.video.VideoRequestDTO;
 import com.dvFabricio.VidaLongaFlix.domain.category.Category;
 import com.dvFabricio.VidaLongaFlix.domain.video.Video;
+import com.dvFabricio.VidaLongaFlix.domain.video.VideoWatchEvent;
 import com.dvFabricio.VidaLongaFlix.infra.config.CacheConfig;
 import com.dvFabricio.VidaLongaFlix.infra.exception.database.DatabaseException;
 import com.dvFabricio.VidaLongaFlix.infra.exception.database.MissingRequiredFieldException;
 import com.dvFabricio.VidaLongaFlix.infra.exception.resource.ResourceNotFoundExceptions;
 import com.dvFabricio.VidaLongaFlix.repositories.CategoryRepository;
 import com.dvFabricio.VidaLongaFlix.repositories.VideoRepository;
+import com.dvFabricio.VidaLongaFlix.infra.messaging.VideoEventPublisher;
+import com.dvFabricio.VidaLongaFlix.repositories.VideoWatchEventRepository;
 import com.dvFabricio.VidaLongaFlix.services.interaction.NotificationService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -29,12 +33,18 @@ public class VideoService {
     private final VideoRepository videoRepository;
     private final CategoryRepository categoryRepository;
     private final NotificationService notificationService;
+    private final VideoWatchEventRepository watchEventRepository;
+    private final VideoEventPublisher videoEventPublisher;
 
     public VideoService(VideoRepository videoRepository, CategoryRepository categoryRepository,
-                        NotificationService notificationService) {
+                        NotificationService notificationService,
+                        VideoWatchEventRepository watchEventRepository,
+                        VideoEventPublisher videoEventPublisher) {
         this.videoRepository = videoRepository;
         this.categoryRepository = categoryRepository;
         this.notificationService = notificationService;
+        this.watchEventRepository = watchEventRepository;
+        this.videoEventPublisher = videoEventPublisher;
     }
 
     @Caching(evict = {
@@ -60,7 +70,7 @@ public class VideoService {
                 .build();
 
         saveVideo(video);
-        notificationService.createForVideo(video);
+        videoEventPublisher.publishVideoPublished(video);
     }
 
     @Caching(evict = {
@@ -123,10 +133,11 @@ public class VideoService {
         @CacheEvict(value = CacheConfig.VIEWS_BY_CATEGORY, allEntries = true)
     })
     @Transactional
-    public void registerView(UUID id) {
+    public void registerView(UUID id, User currentUser) {
         Video video = findVideoById(id);
         video.setViews(video.getViews() + 1);
         saveVideo(video);
+        watchEventRepository.save(new VideoWatchEvent(video, currentUser));
     }
 
     @Cacheable(value = CacheConfig.MOST_WATCHED, key = "#limit")
@@ -154,6 +165,13 @@ public class VideoService {
                         },
                         Long::sum
                 ));
+    }
+
+
+    public List<VideoDTO> searchByText(String query) {
+        return videoRepository.searchByText(query).stream()
+                .map(VideoDTO::new)
+                .toList();
     }
 
     public double getAverageWatchTime(UUID videoId) {

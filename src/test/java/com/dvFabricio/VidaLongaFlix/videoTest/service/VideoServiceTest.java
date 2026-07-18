@@ -2,14 +2,18 @@ package com.dvFabricio.VidaLongaFlix.videoTest.service;
 
 import com.dvFabricio.VidaLongaFlix.domain.category.Category;
 import com.dvFabricio.VidaLongaFlix.domain.category.CategoryType;
+import com.dvFabricio.VidaLongaFlix.domain.user.User;
 import com.dvFabricio.VidaLongaFlix.domain.video.Video;
 import com.dvFabricio.VidaLongaFlix.domain.video.VideoDTO;
 import com.dvFabricio.VidaLongaFlix.domain.video.VideoRequestDTO;
+import com.dvFabricio.VidaLongaFlix.domain.video.VideoWatchEvent;
 import com.dvFabricio.VidaLongaFlix.infra.exception.resource.ResourceNotFoundExceptions;
+import com.dvFabricio.VidaLongaFlix.infra.messaging.VideoEventPublisher;
 import com.dvFabricio.VidaLongaFlix.repositories.CategoryRepository;
 import com.dvFabricio.VidaLongaFlix.repositories.VideoRepository;
-import com.dvFabricio.VidaLongaFlix.services.interaction.NotificationService;
+import com.dvFabricio.VidaLongaFlix.repositories.VideoWatchEventRepository;
 import com.dvFabricio.VidaLongaFlix.services.content.VideoService;
+import com.dvFabricio.VidaLongaFlix.services.interaction.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +37,8 @@ class VideoServiceTest {
     @Mock private VideoRepository videoRepository;
     @Mock private CategoryRepository categoryRepository;
     @Mock private NotificationService notificationService;
+    @Mock private VideoWatchEventRepository watchEventRepository;
+    @Mock private VideoEventPublisher videoEventPublisher;
 
     private Video video;
     private Category category;
@@ -87,7 +93,7 @@ class VideoServiceTest {
     }
 
     @Test
-    void shouldCreateVideo() {
+    void shouldCreateVideoAndPublishEvent() {
         VideoRequestDTO request = new VideoRequestDTO(
                 "Video Title", "Video Description",
                 "http://example.com", "http://cover.com",
@@ -97,6 +103,7 @@ class VideoServiceTest {
 
         assertDoesNotThrow(() -> videoService.create(request));
         then(videoRepository).should().save(any(Video.class));
+        then(videoEventPublisher).should().publishVideoPublished(any(Video.class));
     }
 
     @Test
@@ -110,6 +117,7 @@ class VideoServiceTest {
         assertThrows(ResourceNotFoundExceptions.class,
                 () -> videoService.create(request));
         then(videoRepository).should(never()).save(any());
+        then(videoEventPublisher).should(never()).publishVideoPublished(any());
     }
 
     @Test
@@ -143,12 +151,44 @@ class VideoServiceTest {
     }
 
     @Test
-    void shouldRegisterView() {
+    void shouldRegisterViewIncrementCounterAndSaveEvent() {
         given(videoRepository.findById(videoId)).willReturn(Optional.of(video));
 
-        videoService.registerView(videoId);
+        videoService.registerView(videoId, null);
 
         assertEquals(101, video.getViews());
         then(videoRepository).should().save(video);
+        then(watchEventRepository).should().save(any(VideoWatchEvent.class));
+    }
+
+    @Test
+    void shouldRegisterViewWithAuthenticatedUser() {
+        User user = new User("Fabricio", "fab@email.com", "pass", "11999999999");
+        given(videoRepository.findById(videoId)).willReturn(Optional.of(video));
+
+        videoService.registerView(videoId, user);
+
+        assertEquals(101, video.getViews());
+        then(watchEventRepository).should().save(any(VideoWatchEvent.class));
+    }
+
+    @Test
+    void shouldSearchByText() {
+        given(videoRepository.searchByText("frango")).willReturn(List.of(video));
+
+        List<VideoDTO> result = videoService.searchByText("frango");
+
+        assertEquals(1, result.size());
+        assertEquals("Video Title", result.get(0).title());
+        then(videoRepository).should().searchByText("frango");
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenSearchFindsNothing() {
+        given(videoRepository.searchByText("inexistente")).willReturn(List.of());
+
+        List<VideoDTO> result = videoService.searchByText("inexistente");
+
+        assertTrue(result.isEmpty());
     }
 }

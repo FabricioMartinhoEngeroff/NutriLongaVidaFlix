@@ -7,7 +7,8 @@ import org.junit.platform.suite.api.Suite;
         "com.dvFabricio.VidaLongaFlix.videoTest.domain",
         "com.dvFabricio.VidaLongaFlix.videoTest.repository",
         "com.dvFabricio.VidaLongaFlix.videoTest.service",
-        "com.dvFabricio.VidaLongaFlix.videoTest.controller"
+        "com.dvFabricio.VidaLongaFlix.videoTest.controller",
+        "com.dvFabricio.VidaLongaFlix.infra.messaging"
 })
 public class AllTestsSuite {
 

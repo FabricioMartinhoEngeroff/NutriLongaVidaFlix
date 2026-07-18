@@ -28,7 +28,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 "whatsapp.enabled=false",
                 "admin.email=admin@vidalongaflix.com",
                 "admin.password=AdminTest@123",
-                "spring.cache.type=none"
+                "spring.cache.type=none",
+                "spring.cloud.aws.region.static=us-east-1",
+                "spring.cloud.aws.credentials.access-key=test",
+                "spring.cloud.aws.credentials.secret-key=test"
         }
 )
 @AutoConfigureMockMvc

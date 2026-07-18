@@ -31,4 +31,12 @@ public interface VideoRepository extends JpaRepository<Video, UUID> {
 
     @Query("SELECT v FROM Video v LEFT JOIN v.comments c GROUP BY v ORDER BY COUNT(c) DESC")
     List<Video> findTopByOrderByCommentsCountDesc(Pageable limit);
+
+
+    @Query(value = """
+            SELECT * FROM videos
+            WHERE search_vector @@ plainto_tsquery('portuguese', :query)
+            ORDER BY ts_rank(search_vector, plainto_tsquery('portuguese', :query)) DESC
+            """, nativeQuery = true)
+    List<Video> searchByText(@Param("query") String query);
 }

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class NotificationService {
@@ -60,10 +61,16 @@ public class NotificationService {
 
     @Transactional
     public void createForVideo(Video video) {
+        createForVideo(video.getId(), video.getTitle());
+    }
+
+
+    @Transactional
+    public void createForVideo(UUID videoId, String videoTitle) {
         Notification notification = new Notification();
         notification.setType(NotificationType.VIDEO);
-        notification.setTitle(video.getTitle());
-        notification.setContentId(video.getId());
+        notification.setTitle(videoTitle);
+        notification.setContentId(videoId);
         notificationRepository.save(notification);
     }
 

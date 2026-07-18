@@ -13,12 +13,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -40,6 +43,7 @@ class VideoControllerTest {
         mockMvc = MockMvcBuilders
                 .standaloneSetup(videoController)
                 .setControllerAdvice(new GlobalExceptionHandler())
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
 
         videoId = UUID.randomUUID();
@@ -85,20 +89,41 @@ class VideoControllerTest {
     }
 
     @Test
-    void shouldRegisterView() throws Exception {
-        doNothing().when(videoService).registerView(videoId);
+    void shouldRegisterViewAnonymous() throws Exception {
+        doNothing().when(videoService).registerView(eq(videoId), isNull());
 
         mockMvc.perform(patch("/videos/{id}/view", videoId))
                 .andExpect(status().isOk());
+
+        verify(videoService).registerView(eq(videoId), isNull());
     }
 
     @Test
     void shouldReturnNotFoundWhenRegisteringViewForNonExistentVideo() throws Exception {
         doThrow(new ResourceNotFoundExceptions(
                 "Video with ID " + videoId + " not found."))
-                .when(videoService).registerView(videoId);
+                .when(videoService).registerView(eq(videoId), any());
 
         mockMvc.perform(patch("/videos/{id}/view", videoId))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldReturnSearchResults() throws Exception {
+        when(videoService.searchByText("frango")).thenReturn(List.of(videoDTO));
+
+        mockMvc.perform(get("/videos/search").param("q", "frango"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size()").value(1))
+                .andExpect(jsonPath("$[0].title").value("Video 1"));
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenSearchFindsNothing() throws Exception {
+        when(videoService.searchByText("xyz")).thenReturn(List.of());
+
+        mockMvc.perform(get("/videos/search").param("q", "xyz"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size()").value(0));
     }
 }
