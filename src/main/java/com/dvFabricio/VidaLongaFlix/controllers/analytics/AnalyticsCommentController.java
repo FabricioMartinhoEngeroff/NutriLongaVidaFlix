@@ -17,8 +17,8 @@ public class AnalyticsCommentController {
     private final CommentService commentService;
 
     @GetMapping("/quantidade/video/{videoId}")
-    public ResponseEntity<Integer> getCommentCountByVideo(@PathVariable UUID videoId) {
-        int count = commentService.getCommentCountByVideo(videoId);
+    public ResponseEntity<Long> getCommentCountByVideo(@PathVariable UUID videoId) {
+        long count = commentService.getCommentCountByVideo(videoId);
         return ResponseEntity.ok(count);
     }
 

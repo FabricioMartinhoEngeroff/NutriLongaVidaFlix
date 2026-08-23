@@ -8,7 +8,7 @@ import com.dvFabricio.VidaLongaFlix.domain.video.VideoDTO;
 import com.dvFabricio.VidaLongaFlix.domain.video.VideoRequestDTO;
 import com.dvFabricio.VidaLongaFlix.domain.video.VideoWatchEvent;
 import com.dvFabricio.VidaLongaFlix.infra.exception.resource.ResourceNotFoundExceptions;
-import com.dvFabricio.VidaLongaFlix.infra.messaging.VideoEventPublisher;
+import com.dvFabricio.VidaLongaFlix.infra.messaging.VideoPublishedEvent;
 import com.dvFabricio.VidaLongaFlix.repositories.CategoryRepository;
 import com.dvFabricio.VidaLongaFlix.repositories.VideoRepository;
 import com.dvFabricio.VidaLongaFlix.repositories.VideoWatchEventRepository;
@@ -20,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -38,7 +39,7 @@ class VideoServiceTest {
     @Mock private CategoryRepository categoryRepository;
     @Mock private NotificationService notificationService;
     @Mock private VideoWatchEventRepository watchEventRepository;
-    @Mock private VideoEventPublisher videoEventPublisher;
+    @Mock private ApplicationEventPublisher applicationEventPublisher;
 
     private Video video;
     private Category category;
@@ -103,7 +104,7 @@ class VideoServiceTest {
 
         assertDoesNotThrow(() -> videoService.create(request));
         then(videoRepository).should().save(any(Video.class));
-        then(videoEventPublisher).should().publishVideoPublished(any(Video.class));
+        then(applicationEventPublisher).should().publishEvent(any(VideoPublishedEvent.class));
     }
 
     @Test
@@ -117,7 +118,7 @@ class VideoServiceTest {
         assertThrows(ResourceNotFoundExceptions.class,
                 () -> videoService.create(request));
         then(videoRepository).should(never()).save(any());
-        then(videoEventPublisher).should(never()).publishVideoPublished(any());
+        then(applicationEventPublisher).should(never()).publishEvent(any());
     }
 
     @Test

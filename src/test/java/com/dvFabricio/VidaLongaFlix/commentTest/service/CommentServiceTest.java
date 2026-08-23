@@ -82,7 +82,7 @@ class CommentServiceTest {
     void shouldReturnCommentsByVideo() {
         Comment comment = Comment.builder()
                 .text("Ótimo!").user(user).video(video).build();
-        given(commentRepository.findByVideo_Id(videoId))
+        given(commentRepository.findByVideo_IdOrderByDateAscIdAsc(videoId))
                 .willReturn(List.of(comment));
 
         var result = commentService.getCommentsByVideo(videoId);

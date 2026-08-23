@@ -12,9 +12,10 @@ import com.dvFabricio.VidaLongaFlix.infra.exception.database.MissingRequiredFiel
 import com.dvFabricio.VidaLongaFlix.infra.exception.resource.ResourceNotFoundExceptions;
 import com.dvFabricio.VidaLongaFlix.repositories.CategoryRepository;
 import com.dvFabricio.VidaLongaFlix.repositories.VideoRepository;
-import com.dvFabricio.VidaLongaFlix.infra.messaging.VideoEventPublisher;
+import com.dvFabricio.VidaLongaFlix.infra.messaging.VideoPublishedEvent;
 import com.dvFabricio.VidaLongaFlix.repositories.VideoWatchEventRepository;
 import com.dvFabricio.VidaLongaFlix.services.interaction.NotificationService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -34,17 +35,17 @@ public class VideoService {
     private final CategoryRepository categoryRepository;
     private final NotificationService notificationService;
     private final VideoWatchEventRepository watchEventRepository;
-    private final VideoEventPublisher videoEventPublisher;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public VideoService(VideoRepository videoRepository, CategoryRepository categoryRepository,
                         NotificationService notificationService,
                         VideoWatchEventRepository watchEventRepository,
-                        VideoEventPublisher videoEventPublisher) {
+                        ApplicationEventPublisher applicationEventPublisher) {
         this.videoRepository = videoRepository;
         this.categoryRepository = categoryRepository;
         this.notificationService = notificationService;
         this.watchEventRepository = watchEventRepository;
-        this.videoEventPublisher = videoEventPublisher;
+        this.applicationEventPublisher = applicationEventPublisher;
     }
 
     @Caching(evict = {
@@ -70,7 +71,8 @@ public class VideoService {
                 .build();
 
         saveVideo(video);
-        videoEventPublisher.publishVideoPublished(video);
+
+        applicationEventPublisher.publishEvent(new VideoPublishedEvent(video));
     }
 
     @Caching(evict = {

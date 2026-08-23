@@ -7,7 +7,7 @@ import com.dvFabricio.VidaLongaFlix.domain.user.User;
 import com.dvFabricio.VidaLongaFlix.infra.exception.resource.ResourceNotFoundExceptions;
 import com.dvFabricio.VidaLongaFlix.repositories.FavoriteRepository;
 import com.dvFabricio.VidaLongaFlix.repositories.UserRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,8 +26,6 @@ public class FavoriteService {
         this.userRepository = userRepository;
     }
 
-    // Toggle: se já favoritou, remove — se não, adiciona
-    @Transactional
     public boolean toggle(UUID userId, String itemId, FavoriteContentType itemType) {
         User user = findUser(userId);
 
@@ -38,14 +36,17 @@ public class FavoriteService {
             return false; // removido
         }
 
-        UserFavorite favorite = UserFavorite.builder()
-                .user(user)
-                .itemId(itemId)
-                .itemType(itemType)
-                .build();
-
-        favoriteRepository.save(favorite);
-        return true;
+        try {
+            UserFavorite favorite = UserFavorite.builder()
+                    .user(user)
+                    .itemId(itemId)
+                    .itemType(itemType)
+                    .build();
+            favoriteRepository.save(favorite);
+            return true;
+        } catch (DataIntegrityViolationException e) {
+            return true;
+        }
     }
 
     // Lista todos os favoritos do usuário

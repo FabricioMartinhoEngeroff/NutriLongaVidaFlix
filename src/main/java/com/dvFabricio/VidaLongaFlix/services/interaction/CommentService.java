@@ -61,7 +61,10 @@ public class CommentService {
 
     public Map<UUID, Long> getTotalCommentsByVideo() {
         try {
-            return commentRepository.findAll().stream().collect(Collectors.groupingBy(comment -> comment.getVideo().getId(), Collectors.counting()));
+            return commentRepository.countGroupedByVideo().stream()
+                    .collect(Collectors.toMap(
+                            row -> (UUID) row[0],
+                            row -> (Long) row[1]));
         } catch (Exception e) {
             throw new DatabaseException("Error retrieving comment count by video: " + e.getMessage());
         }
@@ -76,13 +79,13 @@ public class CommentService {
     }
 
     public List<CommentResponseDTO> getCommentsByVideo(UUID videoId) {
-        return commentRepository.findByVideo_Id(videoId).stream()
+        return commentRepository.findByVideo_IdOrderByDateAscIdAsc(videoId).stream()
                 .map(CommentResponseDTO::new)
                 .toList();
     }
 
-    public int getCommentCountByVideo(UUID videoId) {
-        return commentRepository.findByVideo_Id(videoId).size();
+    public long getCommentCountByVideo(UUID videoId) {
+        return commentRepository.countByVideo_Id(videoId);
     }
 
     public List<String> getUserNamesFromCommentsByVideo(UUID videoId) {

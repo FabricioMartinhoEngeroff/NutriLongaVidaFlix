@@ -56,6 +56,24 @@ class FavoriteServiceTest {
     }
 
     @Test
+    void shouldStayFavoritedWhenConcurrentLikeRacesOnUniqueConstraint() {
+        // DDIA cap. 7: duas requisições "curtir" simultâneas (double-tap/retry)
+        // leem "não existe" e ambas tentam inserir. A constraint única do banco
+        // deixa passar só uma; a segunda recebe DataIntegrityViolationException.
+        // O toggle deve tratar isso como idempotente (já curtido), NÃO estourar.
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(favoriteRepository.findByUser_IdAndItemIdAndItemType(
+                userId, "video-1", FavoriteContentType.VIDEO))
+                .willReturn(Optional.empty());
+        given(favoriteRepository.save(any(UserFavorite.class)))
+                .willThrow(new org.springframework.dao.DataIntegrityViolationException("uk_user_item_type"));
+
+        boolean result = favoriteService.toggle(userId, "video-1", FavoriteContentType.VIDEO);
+
+        assertTrue(result, "corrida na constraint única deve resultar em 'curtido', não em erro");
+    }
+
+    @Test
     void shouldRemoveFavoriteWhenAlreadyExists() {
         UserFavorite existing = UserFavorite.builder()
                 .user(user).itemId("video-1")
