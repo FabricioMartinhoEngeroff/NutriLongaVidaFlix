@@ -1,4 +1,5 @@
 package com.dvFabricio.VidaLongaFlix.infra.security;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -28,6 +29,11 @@ public class SecurityConfig {
 
     private final SecurityFilter securityFilter;
 
+    // Dominio do cookie XSRF-TOKEN. Vazio (default) => cookie host-only, correto para dev/local (localhost).
+    // Em prod usamos ".vidalongaflix.com" para que o front (vidalongaflix.com) leia o token emitido pela API (api.vidalongaflix.com).
+    @Value("${csrf.cookie.domain:}")
+    private String csrfCookieDomain;
+
     public SecurityConfig(SecurityFilter securityFilter) {
         this.securityFilter = securityFilter;
     }
@@ -38,7 +44,7 @@ public class SecurityConfig {
         http
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRepository(csrfTokenRepository())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                         .ignoringRequestMatchers("/auth/register", "/auth/login", "/auth/password-recovery", "/auth/reset-password")
                         .ignoringRequestMatchers(request -> {
@@ -83,6 +89,20 @@ public class SecurityConfig {
                 .addFilterBefore(securityFilter,
                         UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    // CookieCsrfTokenRepository, por padrao, herda o context-path (/api) como Path do cookie e nao define Domain,
+    // deixando o XSRF-TOKEN preso em Path=/api e no host da API. Aqui forcamos Path=/ e, em prod, o Domain compartilhado,
+    // para que o Angular (paginas em "/" do dominio do front) consiga ler o token e enviar o header X-XSRF-TOKEN.
+    private CookieCsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieCustomizer(cookie -> {
+            cookie.path("/");
+            if (csrfCookieDomain != null && !csrfCookieDomain.isBlank()) {
+                cookie.domain(csrfCookieDomain);
+            }
+        });
+        return repository;
     }
 
     @Bean

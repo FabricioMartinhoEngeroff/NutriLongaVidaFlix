@@ -44,6 +44,25 @@ class CsrfProtectionIntegrationTest extends BaseIntegrationTest {
         );
     }
 
+    // O cookie XSRF-TOKEN deve ter Path=/ (e nao Path=/api herdado do context-path),
+    // senao o Angular, servido em "/", nao consegue ler o token e o POST/DELETE recebe 403.
+    @Test
+    void shouldSetCsrfCookieWithRootPath() throws Exception {
+        MvcResult result = mockMvc.perform(get("/auth/registration-status"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String xsrfSetCookie = result.getResponse().getHeaders("Set-Cookie").stream()
+                .filter(h -> h.startsWith("XSRF-TOKEN="))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("XSRF-TOKEN nao encontrado no Set-Cookie header"));
+
+        assertTrue(
+                xsrfSetCookie.contains("Path=/") && !xsrfSetCookie.contains("Path=/api"),
+                "XSRF-TOKEN deve ter Path=/ (visivel em todas as paginas do front), mas veio: " + xsrfSetCookie
+        );
+    }
+
     // GET nunca precisa de token CSRF (não muda estado)
     @Test
     void shouldAllowGetRequestWithoutCsrfToken() throws Exception {
