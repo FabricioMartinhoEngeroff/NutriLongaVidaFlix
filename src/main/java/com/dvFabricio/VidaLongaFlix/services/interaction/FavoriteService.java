@@ -3,6 +3,7 @@ package com.dvFabricio.VidaLongaFlix.services.interaction;
 import com.dvFabricio.VidaLongaFlix.domain.favorite.FavoriteContentType;
 import com.dvFabricio.VidaLongaFlix.domain.favorite.FavoriteDTO;
 import com.dvFabricio.VidaLongaFlix.domain.favorite.UserFavorite;
+import com.dvFabricio.VidaLongaFlix.domain.shared.ErrorMessages;
 import com.dvFabricio.VidaLongaFlix.domain.user.User;
 import com.dvFabricio.VidaLongaFlix.infra.exception.resource.ResourceNotFoundExceptions;
 import com.dvFabricio.VidaLongaFlix.repositories.FavoriteRepository;
@@ -33,7 +34,7 @@ public class FavoriteService {
 
         if (existing.isPresent()) {
             favoriteRepository.delete(existing.get());
-            return false; // removido
+            return false;
         }
 
         try {
@@ -49,7 +50,6 @@ public class FavoriteService {
         }
     }
 
-    // Lista todos os favoritos do usuário
     public List<FavoriteDTO> listAll(UUID userId) {
         return favoriteRepository.findByUser_Id(userId)
                 .stream()
@@ -57,7 +57,6 @@ public class FavoriteService {
                 .toList();
     }
 
-    // Lista favoritos por tipo (VIDEO, MENU, RECIPE, etc.)
     public List<FavoriteDTO> listByType(UUID userId, FavoriteContentType itemType) {
         return favoriteRepository.findByUser_IdAndItemType(userId, itemType)
                 .stream()
@@ -65,12 +64,10 @@ public class FavoriteService {
                 .toList();
     }
 
-    // Verifica se um item específico está favoritado
     public boolean isFavorited(UUID userId, String itemId, FavoriteContentType itemType) {
         return favoriteRepository.existsByUser_IdAndItemIdAndItemType(userId, itemId, itemType);
     }
 
-    // Conta quantos usuários favoritaram um item (likes count)
     public long countLikes(String itemId, FavoriteContentType itemType) {
         return favoriteRepository.countByItemIdAndItemType(itemId, itemType);
     }
@@ -79,6 +76,6 @@ public class FavoriteService {
     private User findUser(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundExceptions(
-                        "User with ID " + userId + " not found."));
+                        ErrorMessages.userNotFound(userId)));
     }
 }

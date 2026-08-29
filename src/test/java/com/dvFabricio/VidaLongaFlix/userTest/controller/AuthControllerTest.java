@@ -11,10 +11,11 @@ import com.dvFabricio.VidaLongaFlix.domain.user.User;
 import com.dvFabricio.VidaLongaFlix.domain.user.UserResponseDTO;
 import com.dvFabricio.VidaLongaFlix.domain.user.UserStatus;
 import com.dvFabricio.VidaLongaFlix.domain.waitlist.WaitlistMessageDTO;
+import com.dvFabricio.VidaLongaFlix.infra.exception.authorization.InvalidCredentialsException;
 import com.dvFabricio.VidaLongaFlix.infra.exception.resource.GlobalExceptionHandler;
 import com.dvFabricio.VidaLongaFlix.infra.security.TokenService;
-import com.dvFabricio.VidaLongaFlix.repositories.UserRepository;
 import com.dvFabricio.VidaLongaFlix.services.auth.RegistrationLimitService;
+import com.dvFabricio.VidaLongaFlix.services.auth.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +27,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -35,7 +35,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.Mockito.never;
@@ -54,8 +53,7 @@ class AuthControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @InjectMocks private AuthController authController;
-    @Mock private UserRepository repository;
-    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private UserService userService;
     @Mock private TokenService tokenService;
     @Mock private RegistrationLimitService registrationLimitService;
 
@@ -82,8 +80,7 @@ class AuthControllerTest {
 
     @Test
     void shouldLoginSuccessfully() throws Exception {
-        when(repository.findByEmail("joao@example.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("Password1@", "encodedPassword")).thenReturn(true);
+        when(userService.authenticate("joao@example.com", "Password1@")).thenReturn(user);
         when(tokenService.generateToken(user)).thenReturn("mockToken");
         when(tokenService.getExpiration()).thenReturn(Duration.ofHours(2));
 
@@ -103,8 +100,8 @@ class AuthControllerTest {
 
     @Test
     void shouldReturnUnauthorizedWhenPasswordWrong() throws Exception {
-        when(repository.findByEmail("joao@example.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("WrongPass1@", "encodedPassword")).thenReturn(false);
+        when(userService.authenticate("joao@example.com", "WrongPass1@"))
+                .thenThrow(new InvalidCredentialsException("Invalid credentials"));
 
         LoginRequestDTO request = new LoginRequestDTO("joao@example.com", "WrongPass1@");
 
@@ -122,7 +119,7 @@ class AuthControllerTest {
         user.setStatus(UserStatus.QUEUED);
         user.setQueuePosition(3);
 
-        when(repository.findByEmail("joao@example.com")).thenReturn(Optional.of(user));
+        when(userService.authenticate("joao@example.com", "Password1@")).thenReturn(user);
         when(registrationLimitService.buildQueuedLoginError(user)).thenReturn(
                 new QueueLoginErrorDTO("ACCOUNT_QUEUED", "Sua conta esta na fila de espera.", 3)
         );
@@ -141,7 +138,7 @@ class AuthControllerTest {
     void shouldReturnDisabledPayloadWhenDisabledUserTriesToLogin() throws Exception {
         user.setStatus(UserStatus.DISABLED);
 
-        when(repository.findByEmail("joao@example.com")).thenReturn(Optional.of(user));
+        when(userService.authenticate("joao@example.com", "Password1@")).thenReturn(user);
         when(registrationLimitService.buildDisabledLoginError()).thenReturn(
                 new QueueLoginErrorDTO("ACCOUNT_DISABLED", "Sua conta foi desativada.", null)
         );
@@ -281,8 +278,7 @@ class AuthControllerTest {
 
     @Test
     void shouldSetSessionCookieWhenKeepLoggedInIsFalse() throws Exception {
-        when(repository.findByEmail("joao@example.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("Password1@", "encodedPassword")).thenReturn(true);
+        when(userService.authenticate("joao@example.com", "Password1@")).thenReturn(user);
         when(tokenService.generateToken(user)).thenReturn("mockToken");
 
         LoginRequestDTO request = new LoginRequestDTO("joao@example.com", "Password1@", false);

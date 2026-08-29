@@ -1,5 +1,7 @@
 package com.dvFabricio.VidaLongaFlix.services.content;
 
+import com.dvFabricio.VidaLongaFlix.domain.shared.ErrorMessages;
+import com.dvFabricio.VidaLongaFlix.domain.shared.StringValidator;
 import com.dvFabricio.VidaLongaFlix.domain.user.User;
 import com.dvFabricio.VidaLongaFlix.domain.video.VideoDTO;
 import com.dvFabricio.VidaLongaFlix.domain.video.VideoRequestDTO;
@@ -33,7 +35,6 @@ public class VideoService {
 
     private final VideoRepository videoRepository;
     private final CategoryRepository categoryRepository;
-    private final NotificationService notificationService;
     private final VideoWatchEventRepository watchEventRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
 
@@ -43,7 +44,6 @@ public class VideoService {
                         ApplicationEventPublisher applicationEventPublisher) {
         this.videoRepository = videoRepository;
         this.categoryRepository = categoryRepository;
-        this.notificationService = notificationService;
         this.watchEventRepository = watchEventRepository;
         this.applicationEventPublisher = applicationEventPublisher;
     }
@@ -81,22 +81,11 @@ public class VideoService {
         @CacheEvict(value = CacheConfig.LEAST_WATCHED,     allEntries = true),
         @CacheEvict(value = CacheConfig.VIEWS_BY_CATEGORY, allEntries = true)
     })
+
     @Transactional
     public void update(UUID id, VideoRequestDTO request) {
         Video video = findVideoById(id);
-
-        if (!isBlank(request.title()))       video.setTitle(request.title());
-        if (!isBlank(request.description())) video.setDescription(request.description());
-        if (!isBlank(request.url()))         video.setUrl(request.url());
-        if (!isBlank(request.cover()))       video.setCover(request.cover());
-        if (request.categoryId() != null)    video.setCategory(findCategoryById(request.categoryId()));
-        if (request.recipe() != null)        video.setRecipe(request.recipe());
-        if (request.protein() != null)       video.setProtein(request.protein());
-        if (request.carbs() != null)         video.setCarbs(request.carbs());
-        if (request.fat() != null)           video.setFat(request.fat());
-        if (request.fiber() != null)         video.setFiber(request.fiber());
-        if (request.calories() != null)      video.setCalories(request.calories());
-
+        applyUpdates(video, request);
         saveVideo(video);
     }
 
@@ -188,7 +177,6 @@ public class VideoService {
                 .toList();
     }
 
-    // --- Métodos privados ---
 
     private void saveVideo(Video video) {
         try {
@@ -201,7 +189,7 @@ public class VideoService {
     private Video findVideoById(UUID id) {
         return videoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundExceptions(
-                        "Video with ID " + id + " not found."));
+                        ErrorMessages.videoNotFound(id)));
     }
 
     private Category findCategoryById(UUID categoryId) {
@@ -210,10 +198,21 @@ public class VideoService {
         }
         return categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundExceptions(
-                        "Category with ID " + categoryId + " not found."));
+                        ErrorMessages.categoryNotFound(categoryId)));
     }
 
-    private boolean isBlank(String field) {
-        return field == null || field.isBlank();
+    private void applyUpdates(Video video, VideoRequestDTO request) {
+        if (StringValidator.isNotBlank(request.title()))       video.setTitle(request.title());
+        if (StringValidator.isNotBlank(request.description())) video.setDescription(request.description());
+        if (StringValidator.isNotBlank(request.url()))         video.setUrl(request.url());
+        if (StringValidator.isNotBlank(request.cover()))       video.setCover(request.cover());
+        if (request.categoryId() != null)                      video.setCategory(findCategoryById(request.categoryId()));
+        if (request.recipe() != null)                          video.setRecipe(request.recipe());
+        if (request.protein() != null)                         video.setProtein(request.protein());
+        if (request.carbs() != null)                           video.setCarbs(request.carbs());
+        if (request.fat() != null)                             video.setFat(request.fat());
+        if (request.fiber() != null)                           video.setFiber(request.fiber());
+        if (request.calories() != null)                        video.setCalories(request.calories());
     }
+
 }

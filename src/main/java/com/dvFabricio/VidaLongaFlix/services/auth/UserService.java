@@ -1,9 +1,12 @@
 package com.dvFabricio.VidaLongaFlix.services.auth;
 
+import com.dvFabricio.VidaLongaFlix.domain.shared.ErrorMessages;
+import com.dvFabricio.VidaLongaFlix.domain.shared.StringValidator;
 import com.dvFabricio.VidaLongaFlix.domain.user.UserDTO;
 import com.dvFabricio.VidaLongaFlix.domain.user.UserRequestDTO;
 import com.dvFabricio.VidaLongaFlix.domain.user.Role;
 import com.dvFabricio.VidaLongaFlix.domain.user.User;
+import com.dvFabricio.VidaLongaFlix.infra.exception.authorization.InvalidCredentialsException;
 import com.dvFabricio.VidaLongaFlix.infra.exception.database.MissingRequiredFieldException;
 import com.dvFabricio.VidaLongaFlix.infra.exception.resource.DuplicateResourceException;
 import com.dvFabricio.VidaLongaFlix.infra.exception.resource.ResourceNotFoundExceptions;
@@ -42,15 +45,11 @@ public class UserService {
     }
 
     public UserDTO findAuthenticatedUser(UUID userId) {
-        return userRepository.findById(userId)
-                .map(UserDTO::new)
-                .orElseThrow(() -> new ResourceNotFoundExceptions("Usuário não encontrado com ID: " + userId));
+        return new UserDTO(getUserOrThrow(userId));
     }
 
     public UserDTO findUserById(UUID userId) {
-        return userRepository.findById(userId)
-                .map(UserDTO::new)
-                .orElseThrow(() -> new ResourceNotFoundExceptions("User not found with id: " + userId));
+        return new UserDTO(getUserOrThrow(userId));
     }
 
     @Transactional
@@ -88,8 +87,7 @@ public class UserService {
 
     @Transactional
     public UserDTO updateUser(UUID userId, UserRequestDTO userRequestDTO) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundExceptions("User not found with id: " + userId));
+        User user = getUserOrThrow(userId);
 
         logger.debug("Before update: {}", user);
         updateUserFields(user, userRequestDTO);
@@ -101,10 +99,20 @@ public class UserService {
 
     @Transactional
     public void deleteUser(UUID userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundExceptions("User not found with id: " + userId));
+        User user = getUserOrThrow(userId);
         userRepository.delete(user);
         registrationLimitService.promoteQueuedUsersToAvailableSlots();
+    }
+
+    public User authenticate(String email, String rawPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
+
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+            throw new InvalidCredentialsException("Invalid credentials");
+        }
+
+        return user;
     }
 
     private void updateUserFields(User user, UserRequestDTO dto) {
@@ -130,8 +138,12 @@ public class UserService {
     }
 
     private void validateField(String fieldName, String value) {
-        if (value == null || value.isBlank()) {
+        if (StringValidator.isBlank(value)) {
             throw new MissingRequiredFieldException(fieldName, fieldName + " cannot be empty");
         }
+    }
+    private User getUserOrThrow(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundExceptions(ErrorMessages.userNotFound(userId)));
     }
 }

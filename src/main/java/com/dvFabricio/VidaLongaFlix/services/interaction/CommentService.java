@@ -3,6 +3,8 @@ package com.dvFabricio.VidaLongaFlix.services.interaction;
 import com.dvFabricio.VidaLongaFlix.domain.comment.CommentResponseDTO;
 import com.dvFabricio.VidaLongaFlix.domain.comment.CreateCommentDTO;
 import com.dvFabricio.VidaLongaFlix.domain.comment.Comment;
+import com.dvFabricio.VidaLongaFlix.domain.shared.ErrorMessages;
+import com.dvFabricio.VidaLongaFlix.domain.shared.StringValidator;
 import com.dvFabricio.VidaLongaFlix.domain.user.User;
 import com.dvFabricio.VidaLongaFlix.domain.video.Video;
 import com.dvFabricio.VidaLongaFlix.infra.exception.comment.CommentNotFoundException;
@@ -35,7 +37,7 @@ public class CommentService {
 
     @Transactional
     public void create(CreateCommentDTO dto, UUID userId) {
-        if (isBlank(dto.text())) {
+        if (StringValidator.isBlank(dto.text())) {
             throw new MissingRequiredFieldException("text", "The comment text is required.");
         }
 
@@ -112,19 +114,22 @@ public class CommentService {
     }
 
     private Comment findCommentById(UUID commentId) {
-        return commentRepository.findById(commentId).orElseThrow(() -> new CommentNotFoundException("Comment with ID " + commentId + " not found."));
+        return commentRepository.findById(commentId)
+                .orElseThrow(() -> new CommentNotFoundException(
+                        ErrorMessages.commentNotFound(commentId)));
     }
 
     private Video findVideoById(UUID videoId) {
-        return videoRepository.findById(videoId).orElseThrow(() -> new ResourceNotFoundExceptions("Video with ID " + videoId + " not found."));
+        return videoRepository.findById(videoId)
+                .orElseThrow(() -> new ResourceNotFoundExceptions(
+                        ErrorMessages.videoNotFound(videoId)));
     }
 
     private User findUserById(UUID userId) {
-        return userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundExceptions("User with ID " + userId + " not found."));
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundExceptions(
+                        ErrorMessages.userNotFound(userId)));
     }
 
-    private boolean isBlank(String field) {
-        return field == null || field.isBlank();
-    }
 }
 

@@ -1,7 +1,6 @@
 package com.dvFabricio.VidaLongaFlix.controllers.auth;
 
 import com.dvFabricio.VidaLongaFlix.domain.auth.AuthResponseDTO;
-import com.dvFabricio.VidaLongaFlix.domain.auth.QueueLoginErrorDTO;
 import com.dvFabricio.VidaLongaFlix.domain.auth.RegistrationResponseDTO;
 import com.dvFabricio.VidaLongaFlix.domain.auth.RegistrationStatusDTO;
 import com.dvFabricio.VidaLongaFlix.domain.user.LoginRequestDTO;
@@ -10,11 +9,10 @@ import com.dvFabricio.VidaLongaFlix.domain.user.UserResponseDTO;
 import com.dvFabricio.VidaLongaFlix.domain.user.User;
 import com.dvFabricio.VidaLongaFlix.domain.user.UserStatus;
 import com.dvFabricio.VidaLongaFlix.domain.waitlist.WaitlistMessageDTO;
-import com.dvFabricio.VidaLongaFlix.infra.exception.authorization.InvalidCredentialsException;
 import com.dvFabricio.VidaLongaFlix.infra.exception.resource.ResourceNotFoundExceptions;
 import com.dvFabricio.VidaLongaFlix.infra.security.TokenService;
-import com.dvFabricio.VidaLongaFlix.repositories.UserRepository;
 import com.dvFabricio.VidaLongaFlix.services.auth.RegistrationLimitService;
+import com.dvFabricio.VidaLongaFlix.services.auth.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import jakarta.servlet.http.HttpServletResponse;
@@ -30,8 +28,7 @@ import org.springframework.http.ResponseCookie;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final UserRepository repository;
-    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final UserService userService;
     private final TokenService tokenService;
     private final RegistrationLimitService registrationLimitService;
 
@@ -47,24 +44,18 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(
-            @RequestBody @Valid LoginRequestDTO body) {
+    public ResponseEntity<?> login(@RequestBody @Valid LoginRequestDTO body) {
 
-        User user = repository.findByEmail(body.email())
-                .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
+        User user = userService.authenticate(body.email(), body.password());
 
         if (user.getStatus() == UserStatus.QUEUED) {
-            QueueLoginErrorDTO response = registrationLimitService.buildQueuedLoginError(user);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(registrationLimitService.buildQueuedLoginError(user));
         }
 
         if (user.getStatus() == UserStatus.DISABLED) {
-            QueueLoginErrorDTO response = registrationLimitService.buildDisabledLoginError();
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-        }
-
-        if (!passwordEncoder.matches(body.password(), user.getPassword())) {
-            throw new InvalidCredentialsException("Invalid credentials");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(registrationLimitService.buildDisabledLoginError());
         }
 
         String token = tokenService.generateToken(user);
@@ -73,7 +64,6 @@ public class AuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, buildAuthCookie(token, keepLoggedIn).toString())
                 .body(new AuthResponseDTO(token, new UserResponseDTO(user)));
-
     }
 
     @PostMapping("/register")

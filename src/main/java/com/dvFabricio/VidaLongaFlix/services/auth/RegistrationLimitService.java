@@ -4,6 +4,7 @@ import com.dvFabricio.VidaLongaFlix.domain.auth.QueueLoginErrorDTO;
 import com.dvFabricio.VidaLongaFlix.domain.auth.RegistrationResponseDTO;
 import com.dvFabricio.VidaLongaFlix.domain.auth.RegistrationStatusDTO;
 import com.dvFabricio.VidaLongaFlix.domain.config.AppConfig;
+import com.dvFabricio.VidaLongaFlix.domain.shared.ErrorMessages;
 import com.dvFabricio.VidaLongaFlix.domain.user.RegisterRequestDTO;
 import com.dvFabricio.VidaLongaFlix.domain.user.Role;
 import com.dvFabricio.VidaLongaFlix.domain.user.User;
@@ -24,6 +25,8 @@ import com.dvFabricio.VidaLongaFlix.services.email.WelcomeService;
 import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +36,9 @@ import java.util.UUID;
 public class RegistrationLimitService {
 
     public static final String MAX_ACTIVE_USERS_KEY = "MAX_ACTIVE_USERS";
+    private static final String DEFAULT_MAX_ACTIVE_USERS = "100";
+    private static final Logger logger =
+            LoggerFactory.getLogger(RegistrationLimitService.class);
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -158,7 +164,8 @@ public class RegistrationLimitService {
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundExceptions("User not found with id: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundExceptions(
+                        ErrorMessages.userNotFound(userId)));
 
         if (user.getStatus() != UserStatus.QUEUED) {
             throw new IllegalArgumentException("User is not in the waitlist.");
@@ -182,7 +189,8 @@ public class RegistrationLimitService {
     @Transactional
     public WaitlistMessageDTO removeQueuedUser(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundExceptions("User not found with id: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundExceptions(
+                        ErrorMessages.userNotFound(userId)));
 
         if (user.getStatus() != UserStatus.QUEUED) {
             throw new IllegalArgumentException("User is not in the waitlist.");
@@ -269,7 +277,8 @@ public class RegistrationLimitService {
 
     private AppConfig getConfigForUpdate() {
         return appConfigRepository.findByKeyForUpdate(MAX_ACTIVE_USERS_KEY)
-                .orElseGet(() -> appConfigRepository.save(new AppConfig(MAX_ACTIVE_USERS_KEY, "100")));
+                .orElseGet(() -> appConfigRepository.save(
+                        new AppConfig(MAX_ACTIVE_USERS_KEY, DEFAULT_MAX_ACTIVE_USERS))); // ← aqui
     }
 
     private int getMaxActiveUsersForUpdate() {
@@ -278,7 +287,7 @@ public class RegistrationLimitService {
 
     public int getMaxActiveUsers() {
         return Integer.parseInt(appConfigRepository.findById(MAX_ACTIVE_USERS_KEY)
-                .orElse(new AppConfig(MAX_ACTIVE_USERS_KEY, "100"))
+                .orElse(new AppConfig(MAX_ACTIVE_USERS_KEY, DEFAULT_MAX_ACTIVE_USERS))  // ← e aqui
                 .getValue());
     }
 
@@ -286,15 +295,15 @@ public class RegistrationLimitService {
         try {
             welcomeService.sendWelcomeMessage(user.getName(), user.getEmail());
         } catch (Exception e) {
-            System.err.println("Welcome email nao enviado: " + e.getMessage());
+            logger.warn("Welcome email not sent for user {}: {}", user.getEmail(), e.getMessage());
         }
     }
 
     private void notifyQueuedBestEffort(User user) {
         try {
             waitlistNotificationService.notifyQueued(user);
-        } catch (Exception e) {
-            System.err.println("Fila nao notificada: " + e.getMessage());
+         } catch (Exception e) {
+            logger.warn("Queue notification failed for user {}: {}", user.getEmail(), e.getMessage());
         }
     }
 
@@ -302,7 +311,7 @@ public class RegistrationLimitService {
         try {
             waitlistNotificationService.notifyActivated(user);
         } catch (Exception e) {
-            System.err.println("Ativacao nao notificada: " + e.getMessage());
+            logger.warn("Activation notification failed for user {}: {}", user.getEmail(), e.getMessage());
         }
     }
 
@@ -310,7 +319,7 @@ public class RegistrationLimitService {
         try {
             waitlistNotificationService.notifyRemoved(user);
         } catch (Exception e) {
-            System.err.println("Remocao da fila nao notificada: " + e.getMessage());
+            logger.warn("Removal notification failed for user {}: {}", user.getEmail(), e.getMessage());
         }
     }
 
